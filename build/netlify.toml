@@ -1,4 +1,4 @@
 [[redirects]]
   from = "/api/*"
-  to = "https://enchanting-strudel-a90368.netlify.app/api/:splat"
+  to = "https://buybud.onrender.com/:splat"
   status = 200
