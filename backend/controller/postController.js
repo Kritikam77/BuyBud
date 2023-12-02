@@ -52,7 +52,7 @@ const createPost = catchAsyncErrors(async (req, res) => {
 
   //to add the productId to user's database after he/she creates a product.
   let postId = savedPost._id;
-  console.log(postId);
+  // console.log(postId);
   await User.findByIdAndUpdate(
     { _id: userId },
     { $addToSet: { posts: postId } },

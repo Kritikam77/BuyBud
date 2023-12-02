@@ -412,7 +412,7 @@ exports.deleteSelfProfile = catchAsyncErrors(async (req, res, next) => {
 
   // Remove the user's name from other users' followers lists
   const usersFollowed = await User.find({ followers: userId });
-  console.log("this is followed by user");
+  // console.log("this is followed by user");
   // console.log(usersFollowed);
   for (const followingUser of usersFollowed) {
     followingUser.followers.pull(userId);
@@ -421,7 +421,7 @@ exports.deleteSelfProfile = catchAsyncErrors(async (req, res, next) => {
 
   //remove user's name from other's following
   const usersFollowing = await User.find({ following: userId });
-  console.log("this is following user");
+  // console.log("this is following user");
   // console.log(usersFollowing);
   for (const followingUser of usersFollowing) {
     followingUser.following.pull(userId);

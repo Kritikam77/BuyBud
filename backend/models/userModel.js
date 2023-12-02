@@ -339,8 +339,6 @@ const userSchema = new mongoose.Schema({
 
 //compare password
 userSchema.methods.comparePasswords = async function (candidatePassword) {
-  console.log(candidatePassword);
-  console.log(this.password);
   const isMatch = await bcrypt.compare(candidatePassword, this.password);
   return isMatch;
 };
