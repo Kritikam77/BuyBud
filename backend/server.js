@@ -5,7 +5,10 @@ const app = require("./app.js");
 
 // console.log(process.env.PORT);
 mongoose
-  .connect(process.env.MONGO_DB)
+  .connect(process.env.MONGO_DB, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("Connected to DB"))
   .catch((err) => console.error("Could not connect to MongoDB...", err));
 

@@ -234,6 +234,71 @@ exports.addProductToCart = catchAsyncErrors(async (req, res, next) => {
   }
 });
 
+exports.removeProductFromCart = catchAsyncErrors(async (req, res, next) => {
+  const userId = req.user.id;
+  const productId = req.params.id;
+
+  await User.findByIdAndUpdate(
+    { _id: userId },
+    {
+      $pull: {
+        cartItems: { product: productId },
+      },
+    },
+    { new: true }
+  );
+
+  res.status(200).json({
+    message: "Product removed from cart.",
+  });
+});
+
+exports.decreaseProductQuantity = catchAsyncErrors(async (req, res, next) => {
+  const userId = req.user.id;
+  const productId = req.params.id;
+
+  let user = await User.findOne({ _id: userId });
+  let responseSent = false;
+
+  for (const [index, cartItem] of user.cartItems.entries()) {
+    if (cartItem.product.toString() === productId.toString() && !responseSent) {
+      if (user.cartItems[index].quantity > 1) {
+        user.cartItems[index].quantity -= 1;
+        await user.save();
+
+        res.status(200).json({
+          message: "Product quantity decreased by one.",
+        });
+      } else {
+        await User.findByIdAndUpdate(
+          { _id: userId },
+          {
+            $pull: {
+              cartItems: { product: productId },
+            },
+          },
+          { new: true }
+        );
+
+        res.status(200).json({
+          message: "Product removed from cart as quantity reached minimum.",
+        });
+      }
+
+      // Set the flag to true after sending the response
+      responseSent = true;
+      break; // exit the loop after processing the item
+    }
+  }
+
+  // If product not found in the cart
+  if (!responseSent) {
+    res.status(404).json({
+      error: "Product not found in the cart.",
+    });
+  }
+});
+
 exports.addOrRemoveProductToWishlist = catchAsyncErrors(
   async (req, res, next) => {
     let productFound = false;

@@ -13,6 +13,17 @@ let validator = require("email-validator");
 const cloudinary = require("./../utils/cloudinary.js");
 const streamifier = require("streamifier");
 
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+
+
+//process.env
+const path = require("path");
+require("dotenv").config({
+  path: path.resolve(__dirname, "../config/config.env"),
+});
+
+
 exports.registerUser = catchAsyncErrors(async (req, res, next) => {
   const {
     userName,
@@ -29,6 +40,7 @@ exports.registerUser = catchAsyncErrors(async (req, res, next) => {
     gender,
   } = req.body;
 
+  let avatar;
 
   // console.log('this ',req.files)
   //validate email
@@ -54,26 +66,38 @@ exports.registerUser = catchAsyncErrors(async (req, res, next) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   //upload avatar to cloudinary
-  const bufferStream=streamifier.createReadStream(req.files.avatar[0].buffer)
-  const result = await new Promise((resolve, reject) => {
-    const cloudStream = cloudinary.uploader.upload_stream(
-      { folder: "BuyBud/users" },
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
-      }
+  if (req.files.avatar) {
+    const bufferStream = streamifier.createReadStream(
+      req.files.avatar[0].buffer
     );
+    const result = await new Promise((resolve, reject) => {
+      const cloudStream = cloudinary.uploader.upload_stream(
+        { folder: "BuyBud/users" },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
+      );
 
-    bufferStream.pipe(cloudStream); // Pipe the buffer stream to the cloudinary upload stream
-  });
+      bufferStream.pipe(cloudStream); // Pipe the buffer stream to the cloudinary upload stream
+    });
 
-   let avatar = {
-     public_id: result.public_id,
-     url: result.url,
-   }
+    avatar = {
+      public_id: result.public_id,
+      url: result.url,
+    };
+  }
+
+  if (!req.files.avatar) {
+    avatar = {
+      public_id:
+        "https://asset.cloudinary.com/dgfcyqq8e/e1f0557f52691bcc754c2cb8a23d305f",
+      url: "https://res.cloudinary.com/dgfcyqq8e/image/upload/v1701364233/BuyBud/360_F_346936114_RaxE6OQogebgAWTalE1myseY1Hbb5qPM_e0i4jk.jpg",
+    };
+  }
 
   user = new User({
     userName,
@@ -159,13 +183,15 @@ exports.getMe = catchAsyncErrors(async (req, res, next) => {
   const userId = decoded.userId;
   //   console.log(userId)
   const user = await User.findOne({ _id: userId })
-    .populate("products followers following posts cartItems wishlist following.posts")
+    .populate(
+      "products followers following posts cartItems wishlist following.posts"
+    )
     .populate({
       path: "following",
       populate: {
         path: "posts",
         model: "Post",
-      }
+      },
     });
   //   console.log(user)
   res.status(200).json({ user });
@@ -328,50 +354,6 @@ exports.updateUser = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-exports.forgotPassword = catchAsyncErrors(async (req, res, next) => {});
-
-exports.changePassword = catchAsyncErrors(async (req, res, next) => {
-  const userId = req.user.id;
-
-  // Find the user by ID
-  const user = await User.findById(userId).select("+password");
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
-  }
-
-  if (
-    !req.body.newPassword ||
-    !req.body.confirmNewPassword ||
-    !req.body.oldPassword
-  ) {
-    return res.status(400).json({ message: "Fill in all the details." });
-  }
-
-  // Check if the old password matches the stored hashed password
-  const oldPasswordMatches = await user.comparePasswords(req.body.oldPassword);
-
-  if (!oldPasswordMatches) {
-    return res.status(400).json({ message: "Old password is incorrect" });
-  }
-
-  //check whether new password and confirm new password matches
-  if (req.body.newPassword !== req.body.confirmNewPassword) {
-    return res.status(400).json({
-      message: "New password and Confirm new password doesn't match.",
-    });
-  }
-  // Update the password to the new password
-  user.password = await bcrypt.hash(req.body.newPassword, 10);
-
-  // Save the updated user with the new password
-  await user.save();
-
-  return res.json({
-    message: "Password changed successfully.",
-  });
-});
-
 exports.logOut = catchAsyncErrors(async (req, res, next) => {
   res.clearCookie("token");
   res.status(200).json({ message: "User logged out." });
@@ -443,7 +425,6 @@ exports.getAllUsers = catchAsyncErrors(async (req, res, next) => {
     ],
   }).sort({ createdAt: -1 });
 
-
   return res.status(200).json({
     message: "All users fetched",
     count: users.length,
@@ -474,7 +455,6 @@ exports.getWishlist = catchAsyncErrors(async (req, res, next) => {
 
   // Sort the populated wishlist based on createdAt in descending order
   user.wishlist.sort((a, b) => b.createdAt - a.createdAt);
-
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -522,6 +502,123 @@ exports.followingOrNot = catchAsyncErrors(async (req, res, next) => {
 
   // Return the result
   res.status(200).json({ following: isFollowing });
+});
+
+exports.changePassword = catchAsyncErrors(async (req, res, next) => {
+  const userId = req.user.id;
+
+  // Find the user by ID
+  const user = await User.findById(userId).select("+password");
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  if (
+    !req.body.newPassword ||
+    !req.body.confirmNewPassword ||
+    !req.body.oldPassword
+  ) {
+    return res.status(400).json({ message: "Fill in all the details." });
+  }
+
+  // Check if the old password matches the stored hashed password
+  const oldPasswordMatches = await user.comparePasswords(req.body.oldPassword);
+
+  if (!oldPasswordMatches) {
+    return res.status(400).json({ message: "Old password is incorrect" });
+  }
+
+  //check whether new password and confirm new password matches
+  if (req.body.newPassword !== req.body.confirmNewPassword) {
+    return res.status(400).json({
+      message: "New password and Confirm new password doesn't match.",
+    });
+  }
+  // Update the password to the new password
+  user.password = await bcrypt.hash(req.body.newPassword, 10);
+
+  // Save the updated user with the new password
+  await user.save();
+
+  return res.json({
+    message: "Password changed successfully. Redirecting to home.....",
+  });
+});
+
+exports.forgotPassword = catchAsyncErrors(async (req, res, next) => {
+  const { email } = req.body;
+
+  // Find the user by email
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  user.resetPasswordToken = resetToken;
+  user.resetPasswordExpires = Date.now() + 600000; //10 minutes
+
+  await user.save();
+
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  //email content
+  const mailOptions = {
+    from: "BuyBud Password Recovery",
+    to: email,
+    subject: "BuyBud Password Reset Request",
+    text: `You are receiving this email because you (or someone else) has requested the reset of the password for your account.\n\n
+      Please click on the following link, or paste this into your browser to complete the process:\n\n
+      ${req.protocol}://${req.get("host")}/reset-password/${resetToken}\n\n
+      If you did not request this, please ignore this email and your password will remain unchanged.\n`,
+  };
+
+  //send the email
+  await transporter.sendMail(mailOptions);
+
+  res.json({ message: "Password reset email sent successfully" });
+});
+
+exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
+  const { token } = req.params;
+  const { newPassword, confirmNewPassword } = req.body;
+
+  const user = await User.findOne({
+    resetPasswordExpires: { $gt: Date.now() },
+    resetPasswordToken: token,
+  });
+
+  if (!user) {
+    return res.status(400).json({ message: "Invalid or expired reset token. Try sending email recovery email again." });
+  }
+
+  // Check if the new password and confirm password match
+  if (newPassword !== confirmNewPassword) {
+    return res.status(400).json({
+      message: "New password and confirm password don't match",
+    });
+  }
+
+  // Update the password to the new password
+  user.password = await bcrypt.hash(newPassword, 10);
+
+  // Clear the reset token and expiration from the user document
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+
+  // Save the updated user document
+  await user.save();
+
+  res.json({ message: "Password reset successful" });
 });
 
 //ADMIN

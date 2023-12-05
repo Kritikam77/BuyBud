@@ -77,7 +77,13 @@ router
   .route("/checkFollowing/:id")
   .get(userController.authenticateUser, userController.followingOrNot);
 
+router
+  .route("/forgotPassword")
+  .put( userController.forgotPassword);
 
+router
+  .route("/reset-Password/:token")
+  .put( userController.resetPassword);
 
 //ADMIN
 router
