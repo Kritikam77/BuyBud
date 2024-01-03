@@ -363,7 +363,7 @@ exports.deleteProduct = catchAsyncErrors(async (req, res, next) => {
     });
   }
 
-  await Product.findOneAndDelete(productId);
+  await product.deleteOne();
 
   return res
     .status(200)

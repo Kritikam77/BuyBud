@@ -8,7 +8,8 @@ const {
 const { generateToken } = require("./../utils/auth.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-let validator = require("email-validator");
+let emailValidator = require("email-validator");
+const validator = require("validator");
 
 const cloudinary = require("./../utils/cloudinary.js");
 const streamifier = require("streamifier");
@@ -43,17 +44,43 @@ exports.registerUser = catchAsyncErrors(async (req, res, next) => {
   let avatar;
 
   // console.log('this ',req.files)
-  //validate email
-  if (!validator.validate(email)) {
+
+  //password length
+  if(password.length<6){
     return res.status(400).json({
-      message: "Please enter valid email.",
+      error: "Password should be atleast 6 characters long.",
+    });
+  }
+  //validate email
+  if (!emailValidator.validate(email)) {
+    return res.status(400).json({
+      error: "Please enter valid email.",
+    });
+  }
+
+  //check phone number
+  if (!validator.matches(phoneNumber, /^[0-9]+$/ || phoneNumber.length > 15)) {
+    return res.status(400).json({
+      error:
+        "Invalid phone number. Must contain only numeric digits or phone number too long.",
+    });
+  }
+
+  //check postal code 
+  if (
+    !validator.matches(postalCode, /^[0-9]+$/) ||
+    postalCode.length > 15
+  ) {
+    return res.status(400).json({
+      error:
+        "Invalid postal code. Must contain only numeric digits or postal code too long.",
     });
   }
 
   let user = await User.findOne({ email });
   if (user) {
     return res.status(409).json({
-      message: "Email already exists. Please login.",
+      error: "Email already exists. Please login.",
     });
   }
 
@@ -621,6 +648,11 @@ exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
   res.json({ message: "Password reset successful" });
 });
 
+exports.checkForAdmin=catchAsyncErrors(async(req,res,next)=>{
+  res.json({ message: "Current user is Admin." });
+  
+})
+
 //ADMIN
 exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
   const userId = req.params.id;
@@ -673,7 +705,7 @@ exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
   }
 
   // Delete the user
-  await user.remove();
+  await user.deleteOne();
 
   return res
     .status(200)

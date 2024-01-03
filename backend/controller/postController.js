@@ -293,7 +293,7 @@ const deleteAnyPost = catchAsyncErrors(async (req, res) => {
   const creatorId = post.creatorId;
 
   // Delete the post
-  await post.remove();
+  await post.deleteOne();
 
   // Remove the post ID from the creator's posts array
   await User.findByIdAndUpdate(

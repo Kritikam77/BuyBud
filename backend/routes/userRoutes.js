@@ -90,5 +90,8 @@ router
   .route("/deleteUser/:id")
   .delete(userController.authorizeUser, userController.deleteUser);
 
+router
+  .route("/admin")
+  .get(userController.authorizeUser, userController.checkForAdmin);
 
 module.exports = router;
