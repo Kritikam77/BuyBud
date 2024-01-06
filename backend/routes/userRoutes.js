@@ -78,12 +78,23 @@ router
   .get(userController.authenticateUser, userController.followingOrNot);
 
 router
+  .route("/savePost/:id")
+  .put(userController.authenticateUser, userController.savePost);
+  
+router
+  .route("/posts/:postId/hasSaved")
+  .get(userController.authenticateUser, userController.hasUserSavedPost);
+
+
+router
   .route("/forgotPassword")
   .put( userController.forgotPassword);
 
 router
   .route("/reset-Password/:token")
   .put( userController.resetPassword);
+
+
 
 //ADMIN
 router

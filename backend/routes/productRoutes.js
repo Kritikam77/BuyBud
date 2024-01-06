@@ -13,7 +13,7 @@ router.route("/createProduct").post(
     { name: "price", maxCount: 1 },
     { name: "category", maxCount: 1 },
     { name: "stock", maxCount: 1 },
-    { name: "imageUrls", maxCount: 10 },
+    { name: "imageUrls", maxCount: 30 },
   ]),
   userController.authenticateUser,
   productController.createProduct

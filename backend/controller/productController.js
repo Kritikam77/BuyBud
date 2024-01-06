@@ -107,7 +107,7 @@ exports.getAllProducts = catchAsyncErrors(async (req, res, next) => {
 exports.getProductById = catchAsyncErrors(async (req, res, next) => {
   let productId = req.params.id;
 
-  let product = await Product.findOne({ _id: productId }).populate('owner');
+  let product = await Product.findOne({ _id: productId }).populate("owner");
 
   return res.status(200).json({
     product,
@@ -163,6 +163,18 @@ exports.deleteOwnProduct = catchAsyncErrors(async (req, res, next) => {
       { _id: userId },
       { $pull: { products: productId } },
       { new: true }
+    );
+
+    // Remove the product from every user's wishlist
+    await User.updateMany(
+      { "wishlist.product": productId },
+      { $pull: { wishlist: { product: productId } } }
+    );
+
+    // Remove the product from every user's cart
+    await User.updateMany(
+      { "cartItems.product": productId },
+      { $pull: { cartItems: { product: productId } } }
     );
 
     //delete product
@@ -362,6 +374,18 @@ exports.deleteProduct = catchAsyncErrors(async (req, res, next) => {
       message: "Product doesn't exist.",
     });
   }
+
+  // Remove the product from every user's wishlist
+  await User.updateMany(
+    { "wishlist.product": productId },
+    { $pull: { wishlist: { product: productId } } }
+  );
+
+  // Remove the product from every user's cart
+  await User.updateMany(
+    { "cartItems.product": productId },
+    { $pull: { cartItems: { product: productId } } }
+  );
 
   await product.deleteOne();
 

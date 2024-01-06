@@ -10,7 +10,7 @@ const upload = require("./../utils/multer");
 router.route("/createPost").post(
   upload.fields([
     { name: "caption", maxCount: 1 },
-    { name: "images", maxCount: 10 },
+    { name: "images", maxCount: 50 },
   ]),
   userController.authenticateUser,
   postController.createPost

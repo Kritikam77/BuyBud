@@ -44,7 +44,7 @@ const userSchema = new mongoose.Schema({
       maxlength: 20,
     },
     postalCode: {
-      type: Number,
+      type: String,
       required: [true, "Postal Code is required."],
       maxlength: 10,
     },
@@ -270,7 +270,7 @@ const userSchema = new mongoose.Schema({
     default: "User",
   },
   phoneNumber: {
-    type: Number,
+    type: String,
     required: [true, "Phone Number is required."],
   },
   products: [
@@ -286,6 +286,12 @@ const userSchema = new mongoose.Schema({
     },
   ],
   likedPosts: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Post",
+    },
+  ],
+  savedPosts: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Post",

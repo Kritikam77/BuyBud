@@ -277,6 +277,7 @@ const getUserPosts = catchAsyncErrors(async (req, res) => {
 });
 
 
+
 //ADMIN
 
 // Function to delete any post

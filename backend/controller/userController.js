@@ -1,4 +1,5 @@
 const User = require("../models/userModel.js");
+const Post = require("../models/postModel.js");
 const Product = require("../models/productModel.js");
 const DeletedUser = require("../models/deletedUserModel.js");
 const {
@@ -17,13 +18,11 @@ const streamifier = require("streamifier");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
-
 //process.env
 const path = require("path");
 require("dotenv").config({
   path: path.resolve(__dirname, "../config/config.env"),
 });
-
 
 exports.registerUser = catchAsyncErrors(async (req, res, next) => {
   const {
@@ -46,7 +45,7 @@ exports.registerUser = catchAsyncErrors(async (req, res, next) => {
   // console.log('this ',req.files)
 
   //password length
-  if(password.length<6){
+  if (password.length < 6) {
     return res.status(400).json({
       error: "Password should be atleast 6 characters long.",
     });
@@ -66,11 +65,8 @@ exports.registerUser = catchAsyncErrors(async (req, res, next) => {
     });
   }
 
-  //check postal code 
-  if (
-    !validator.matches(postalCode, /^[0-9]+$/) ||
-    postalCode.length > 15
-  ) {
+  //check postal code
+  if (!validator.matches(postalCode, /^[0-9]+$/) || postalCode.length > 15) {
     return res.status(400).json({
       error:
         "Invalid postal code. Must contain only numeric digits or postal code too long.",
@@ -211,7 +207,7 @@ exports.getMe = catchAsyncErrors(async (req, res, next) => {
   //   console.log(userId)
   const user = await User.findOne({ _id: userId })
     .populate(
-      "products followers following posts cartItems wishlist following.posts"
+      "products followers following posts cartItems wishlist following.posts savedPosts likedPosts"
     )
     .populate({
       path: "following",
@@ -625,7 +621,10 @@ exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
   });
 
   if (!user) {
-    return res.status(400).json({ message: "Invalid or expired reset token. Try sending email recovery email again." });
+    return res.status(400).json({
+      message:
+        "Invalid or expired reset token. Try sending email recovery email again.",
+    });
   }
 
   // Check if the new password and confirm password match
@@ -648,10 +647,64 @@ exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
   res.json({ message: "Password reset successful" });
 });
 
-exports.checkForAdmin=catchAsyncErrors(async(req,res,next)=>{
+exports.checkForAdmin = catchAsyncErrors(async (req, res, next) => {
   res.json({ message: "Current user is Admin." });
-  
-})
+});
+
+exports.savePost = catchAsyncErrors(async (req, res) => {
+  const userId = req.user.id;
+  const postId = req.params.id;
+
+  const post = await Post.findById(postId);
+  const user = await User.findById(userId);
+
+  if (!post) {
+    return res.status(404).json({ message: "Post not found." });
+  }
+
+  const index = user.savedPosts.indexOf(postId);
+
+  if (index === -1) {
+    // If postId is not present in savedPosts, add it
+    user.savedPosts.push(postId);
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Post saved",
+    });
+  } else {
+    // If postId is present in savedPosts, remove it
+    user.savedPosts.splice(index, 1);
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Post unsaved",
+    });
+  }
+});
+
+exports.hasUserSavedPost = catchAsyncErrors(async (req, res, next) => {
+  const postId = req.params.postId;
+  const userId = req.user.id;
+
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    return res.status(404).json({ error: "Post not found" });
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const hasSaved = user.savedPosts.includes(postId);
+
+  res.status(200).json({ hasSaved });
+});
 
 //ADMIN
 exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
