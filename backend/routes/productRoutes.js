@@ -56,6 +56,12 @@ router
     productController.addOrRemoveProductToWishlist
   );
 
+router
+  .route("/getSimilarProducts/:id")
+  .get(
+    productController.similarProducts
+  );
+
 //ADMIN
 router
   .route("/deleteProduct/:id")

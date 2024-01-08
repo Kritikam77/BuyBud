@@ -363,6 +363,41 @@ exports.addOrRemoveProductToWishlist = catchAsyncErrors(
   }
 );
 
+exports.similarProducts = catchAsyncErrors(async (req, res, next) => {
+  let prodId = req.params.id;
+
+  let product = await Product.findOne({ _id: prodId });
+
+  if (!product) {
+    return res.status(400).json({
+      message: "Product doesn't exist.",
+    });
+  }
+
+  const elementsToExclude = ["UNISEX", "unisex", "uni sex", "the", 'THE',"The","a","on","ON","On","Based","BASED","based","Official","OFFICIAL","official","&","Your","your","YOUR","FOR","for","For","BY","by","By", '|',"AND","And","and","hit","HIT","Hit","Officially","OFFICIALLY","officially","CLASSIC","Classic","classic","LICENSED","Licensed","licensed",];
+
+  let newArr = product.title.split(" ").filter((item) => !elementsToExclude.includes(item));
+
+  const products = await Product.find({
+    $or: [
+      {
+        title: { $regex: new RegExp(newArr.join("|"), "i") },
+      },
+      {
+        category: product.category,
+      },
+    ],
+  });
+
+  return res.status(200).json({
+    message: "Similar Products.",
+    newArr,
+    count:products.length,
+    products
+    
+  });
+});
+
 //ADMIN
 exports.deleteProduct = catchAsyncErrors(async (req, res, next) => {
   let productId = req.params.id;
